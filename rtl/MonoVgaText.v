@@ -3,11 +3,11 @@ module MonoVgaText(
     input         i_reset,
 
     output [15:0] o_vgaram_addr,
-    input [7:0]   i_vgaram_dat,
+    input  [7:0]  i_vgaram_dat,
     output        o_vgaram_cs,
     output        o_vgaram_access,
 
-    input [7:0]   i_dat,
+    input  [7:0]  i_dat,
     input         i_addr,
     input         i_cs,
     input         i_we,
@@ -32,6 +32,10 @@ parameter
 parameter
     FONT_WIDTH = 8,
     FONT_HEIGHT = 16;
+
+parameter
+    FONT_BASE_INITIAL   = 16'h0000,
+    SCREEN_BASE_INITIAL = 16'h1000;
 
 // ----------------------------------------------------------------------------
 // This module generates:
@@ -139,8 +143,8 @@ end
 // ----------------------------------------------------------------------------
 // CPU databus interface. CPU can set memory base addresses
 
-reg [15:12] r_font_base; // base address of fonts
-reg [15:12] r_screen_base; // base address of screen
+reg [15:12] r_font_base = FONT_BASE_INITIAL; // base address of fonts
+reg [15:12] r_screen_base = SCREEN_BASE_INITIAL; // base address of screen
 
 // register map
 // 0: font address msb

@@ -1,0 +1,13 @@
+set_io clk100mhz    J3
+set_io reset_n      K11
+set_io vsync        H2
+set_io hsync        J4
+set_io blue[2]      G2
+set_io blue[1]      H4
+set_io blue[0]      F1
+set_io green[2]     H6
+set_io green[1]     F2
+set_io green[0]     H3
+set_io red[2]       F3
+set_io red[1]       H5
+set_io red[0]       E3
