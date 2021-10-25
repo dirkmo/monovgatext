@@ -34,8 +34,8 @@ parameter
     FONT_HEIGHT = 16;
 
 parameter
-    FONT_BASE_INITIAL   = 16'h0000,
-    SCREEN_BASE_INITIAL = 16'h1000;
+    FONT_BASE_INITIAL   = 4'h0,
+    SCREEN_BASE_INITIAL = 4'h1;
 
 // ----------------------------------------------------------------------------
 // This module generates:
