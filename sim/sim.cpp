@@ -84,8 +84,14 @@ void write_register(uint16_t addr, uint8_t dat) {
 }
 
 void set_registers(void) {
-    write_register(0, FONT_BASE >> 8);
-    write_register(1, SCREEN_BASE >> 8);
+    // addresses
+    write_register(0, ((FONT_BASE & 0xF000) >> 8) | ((SCREEN_BASE & 0xF000) >> 12));
+    // cursor character
+    write_register(1, 219);
+    // cursor position
+    int pos = 13;
+    write_register(2, pos & 0xff);
+    write_register(3, pos >> 8);
 }
 
 void handle(VMonoVgaText *pCore) {
@@ -140,7 +146,7 @@ int main(int argc, char *argv[]) {
         old_clk = pCore->i_clk;
 
 #if defined(TRACE_ON)
-        if (pCore->MonoVgaText->y == 16) {
+        if (pCore->MonoVgaText->y == 32) {
             printf("Ende\n");
             vga_wait_keypress();
             break;

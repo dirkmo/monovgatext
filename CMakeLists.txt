@@ -7,6 +7,11 @@ if (NOT verilator_FOUND)
   message(FATAL_ERROR "Verilator was not found. Either install it, or set the VERILATOR_ROOT environment variable")
 endif()
 
+set(CMAKE_BUILD_TYPE DEBUG)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}-O0 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g")
+
 # Create a new executable target that will contain all your sources
 add_executable(simulation sim/sim.cpp sim/vga.cpp sim/IBM_VGA_8x16.c)
 
@@ -17,5 +22,5 @@ target_link_libraries(simulation PRIVATE ${SDL2_LIBRARIES})
 # Add the Verilated circuit to the target
 verilate(simulation COVERAGE TRACE
   INCLUDE_DIRS "sim/"
-  VERILATOR_ARGS -O0 -x-assign 0 +librescan +libext+.v -y rtl/
+  VERILATOR_ARGS -CFLAGS "-g" -trace -O0 -x-assign 0 +librescan +libext+.v -y rtl/
   SOURCES rtl/MonoVgaText.v)

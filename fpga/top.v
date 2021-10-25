@@ -27,6 +27,7 @@ MonoVgaText vga0(
     .o_vgaram_cs(),
     .o_vgaram_access(),
     .i_dat(8'h0),
+    .o_dat(),
     .i_addr(1'h0),
     .i_cs(1'b0),
     .i_we(1'b0),

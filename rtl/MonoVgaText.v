@@ -1,20 +1,21 @@
 module MonoVgaText(
-    input         i_clk,
-    input         i_reset,
+    input             i_clk,
+    input             i_reset,
 
-    output [15:0] o_vgaram_addr,
-    input  [7:0]  i_vgaram_dat,
-    output        o_vgaram_cs,
-    output        o_vgaram_access,
+    output     [15:0] o_vgaram_addr,
+    input      [7:0]  i_vgaram_dat,
+    output            o_vgaram_cs,
+    output            o_vgaram_access,
 
-    input  [7:0]  i_dat,
-    input         i_addr,
-    input         i_cs,
-    input         i_we,
+    input      [7:0]  i_dat,
+    output reg [7:0]  o_dat,
+    input      [1:0]  i_addr,
+    input             i_cs,
+    input             i_we,
 
-    output reg    o_hsync,
-    output reg    o_vsync,
-    output        o_pixel
+    output reg        o_hsync,
+    output reg        o_vsync,
+    output            o_pixel
 );
 
 parameter
@@ -34,8 +35,8 @@ parameter
     FONT_HEIGHT = 16;
 
 parameter
-    FONT_BASE_INITIAL   = 4'h0,
-    SCREEN_BASE_INITIAL = 4'h1;
+    FONT_BASE_INITIAL   = 4'h0, // 0x0000
+    SCREEN_BASE_INITIAL = 4'h1; // 0x1000
 
 // ----------------------------------------------------------------------------
 // This module generates:
@@ -140,26 +141,44 @@ begin
     end
 end
 
+
 // ----------------------------------------------------------------------------
-// CPU databus interface. CPU can set memory base addresses
+// CPU databus interface
 
 reg [15:12] r_font_base = FONT_BASE_INITIAL; // base address of fonts
 reg [15:12] r_screen_base = SCREEN_BASE_INITIAL; // base address of screen
+reg [ 7: 0] r_cursor = 8'd219;
+reg [11: 0] r_cursor_addr = 12'd0;
 
 // register map
-// 0: font address msb
-// 1: screen address msb
+// 0: [7:4] font address, [3:0] screen address
+// 1: Cursor character index
+// 2: Cursor address low byte [7:0]
+// 3: Cursor address high byte [11:8]
+
+always @(*)
+    case (i_addr)
+        2'h0: o_dat = {r_font_base[15:12], r_screen_base [15:12]};
+        2'h1: o_dat = r_cursor;
+        2'h2: o_dat = r_cursor_addr[ 7:0];
+        2'h3: o_dat = { 4'h0, r_cursor_addr[11:8]};
+    endcase
 
 always @(posedge i_clk)
 begin
-    if (i_cs && i_we)
+    if (i_cs)
     begin
-        if (i_addr == 1'b0)
-            r_font_base[15:12] <= i_dat[7:4];
-        else
-            r_screen_base [15:12]<= i_dat[7:4];
+        if (i_we) begin
+            case (i_addr)
+                2'h0: {r_font_base[15:12], r_screen_base [15:12]} <= i_dat[7:0];
+                2'h1: r_cursor <= i_dat;
+                2'h2: r_cursor_addr[ 7:0] <= i_dat;
+                2'h3: r_cursor_addr[11:8] <= i_dat[3:0];
+            endcase
+        end
     end
 end
+
 
 // ----------------------------------------------------------------------------
 // read data from memory in two consecutive ram accesses
@@ -209,17 +228,24 @@ end
 
 wire [15:0] screen_addr = { r_screen_base[15:12], r_screen_addr_rel[11:0] };
 
+reg [23:0] blink;
+always @(posedge i_clk)
+    blink <= blink + 1'b1;
+
+wire on_cursor_position = (r_screen_addr_rel == r_cursor_addr) && blink[23];
+
 // ----------------------------------------------------------------------------
 // Fontline read-out
 
 // font memory address generation
 reg  [11:0] r_font_addr_rel;
 wire [15:0] font_addr = { r_font_base[15:12], r_font_addr_rel[11:0] };
+wire [7:0] character = on_cursor_position ? r_cursor : i_vgaram_dat;
 
 always @(posedge i_clk)
 begin
     if (fetch_char_from_screen) begin
-        r_font_addr_rel <= { i_vgaram_dat[7:0], y[3:0] };
+        r_font_addr_rel <= { character, y[3:0] };
     end
 end
 
@@ -253,4 +279,3 @@ assign o_vgaram_access = start_fetch || fetch_char_from_screen;
 assign o_pixel = isVisible && r_fontline[~x[2:0]];
 
 endmodule
-

@@ -20,7 +20,7 @@ pll:
 	icetime -d $(DEVICE) -mtr $@ $<
 
 prog: $(PROJ).bin
-	sudo iceprogduino $<
+	iceprogduino $<
 
 sudo-prog: $(PROJ).bin
 	@echo 'Executing prog as root!!!'
