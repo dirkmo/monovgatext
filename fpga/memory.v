@@ -1,16 +1,28 @@
 module memory(
-    input [12:0] i_addr,
-    output [7:0] o_dat
+    input        i_clk,
+    input  [12:0] i_addr,
+    input  [7:0] i_dat,
+    output [7:0] o_dat,
+    input        i_we,
+    input        i_cs
 );
 
-reg [7:0] font[0:'hfff];
-reg [7:0] screen[0:'d2399];
+reg [7:0] mem[0:'h1fff];
 
-assign o_dat = i_addr[12] ? screen[i_addr[11:0]] : font[i_addr[11:0]];
+always @(posedge i_clk)
+    if (i_cs && ~i_we)
+        o_dat <= mem[i_addr[7:0]];
+
+always @(posedge i_clk)
+begin
+    if(i_cs && i_we) begin
+        mem[i_addr[7:0]] <= i_dat;
+    end
+end
 
 initial begin
-    $readmemh("font.mem", font);
-    $readmemh("screen.mem", screen);
+    $readmemh("font.mem", mem, 0);
+    $readmemh("screen.mem", mem, 4096);
 end
 
 endmodule

@@ -1,7 +1,7 @@
 PROJ = top
 PIN_DEF = MonoVgaText.pcf
 DEVICE = hx8k
-SOURCES = top.v pll.v memory.v ../rtl/MonoVgaText.v
+SOURCES = top.v pll.v memory.v $(wildcard ../rtl/*.v) $(wildcard ../rtl/import/*.v)
 all: $(PROJ).rpt $(PROJ).bin
 
 pll:

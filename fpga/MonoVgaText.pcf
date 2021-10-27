@@ -11,3 +11,5 @@ set_io green[0]     H3
 set_io red[2]       F3
 set_io red[1]       H5
 set_io red[0]       E3
+set_io uart_tx      E4
+set_io uart_rx      B2
