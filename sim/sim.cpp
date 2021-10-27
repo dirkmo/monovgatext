@@ -1,18 +1,21 @@
 #include <stdint.h>
 #include <string.h>
 #include <verilated_vcd_c.h>
-#include "VMonoVgaText.h"
-#include "VMonoVgaText_MonoVgaText.h"
+#include "VMasterShell.h"
+#include "VMasterShell_MasterShell.h"
+#include "VMasterShell_MonoVgaText.h"
+#include "VMasterShell_UartMaster.h"
 #include "verilated.h"
 
 #include "IBM_VGA_8x16.h"
 #include "vga.h"
+#include "uart.h"
 
 
 using namespace std;
 
 VerilatedVcdC *pTrace = NULL;
-VMonoVgaText *pCore;
+VMasterShell *pCore;
 
 uint64_t tickcount = 0;
 uint64_t ts = 1000;
@@ -20,7 +23,7 @@ uint64_t ts = 1000;
 uint8_t mem[0x10000];
 
 #define FONT_BASE   0x0000
-#define SCREEN_BASE 0x2000
+#define SCREEN_BASE 0x1000
 
 void opentrace(const char *vcdname) {
     if (!pTrace) {
@@ -69,66 +72,53 @@ void initialize_memory(void) {
     mem[SCREEN_BASE+80*30-1] = 'X';
 }
 
-void write_register(uint16_t addr, uint8_t dat) {
-    pCore->i_addr = addr;
-    pCore->i_dat = dat;
-    pCore->i_we = 1;
-    pCore->i_cs = 1;
-    pCore->i_clk = 0; pCore->eval();
-    pCore->i_clk = 1; pCore->eval();
-    pCore->i_we = 0;
-    pCore->i_dat = 0;
-    pCore->i_addr = 0;
-    pCore->i_cs = 0;
-    pCore->i_clk = 0; pCore->eval();
-}
-
-void set_registers(void) {
-    // addresses
-    write_register(0, ((FONT_BASE & 0xF000) >> 8) | ((SCREEN_BASE & 0xF000) >> 12));
-    // cursor character
-    write_register(1, 219);
-    // cursor position
-    int pos = 13;
-    write_register(2, pos & 0xff);
-    write_register(3, pos >> 8);
-}
-
-void handle(VMonoVgaText *pCore) {
-    static int addr = -1;
-    if(pCore->o_vgaram_cs) {
-        if (addr != pCore->o_vgaram_addr) {
-            int x = pCore->MonoVgaText->x;
-            int y = pCore->MonoVgaText->y;
-            uint8_t c = mem[pCore->o_vgaram_addr];
-            addr = pCore->o_vgaram_addr;
-            // printf("%ld: x:%d y:%d Access: %04x %02x (%c)\n", tickcount, x, y, addr, c, c);
+void handle(VMasterShell *pCore) {
+    int clk = -1;
+    if (clk != pCore->i_clk) {
+        if(pCore->o_cs) {
+            if (pCore->o_we) {
+                mem[pCore->o_addr] = pCore->o_dat;
+            } else {
+                pCore->i_dat = mem[pCore->o_addr];
+            }
+        } else {
+            pCore->i_dat = 0;
         }
-        pCore->i_vgaram_dat = mem[pCore->o_vgaram_addr];
-    } else {
-        pCore->i_vgaram_dat = 0;
-        addr = -1;
+        pCore->i_ack = pCore->o_cs;
     }
+    int rxbyte;
+    if (uart_handle(&rxbyte)) {
+        printf("UART: %c\n",rxbyte);
+    }
+    clk = pCore->i_clk;
 }
 
 int main(int argc, char *argv[]) {
     Verilated::traceEverOn(true);
-    pCore = new VMonoVgaText();
-    
-#if defined(TRACE_ON)
-    opentrace("trace.vcd");
-#endif
+    pCore = new VMasterShell();
 
-    vga_init(
-        pCore->MonoVgaText->HSIZE, pCore->MonoVgaText->HFP, pCore->MonoVgaText->HSYNC, pCore->MonoVgaText->HBP,
-        pCore->MonoVgaText->VSIZE, pCore->MonoVgaText->VFP, pCore->MonoVgaText->VSYNC, pCore->MonoVgaText->VBP
-    );
+    if (argc > 1) {
+        if( string(argv[1]) == "-t" ) {
+            printf("Trace enabled\n");
+            opentrace("trace.vcd");
+        }
+    }    
 
     initialize_memory();
 
-    set_registers();
+    vga_init(
+        pCore->MasterShell->vga0->HSIZE, pCore->MasterShell->vga0->HFP, pCore->MasterShell->vga0->HSYNC, pCore->MasterShell->vga0->HBP,
+        pCore->MasterShell->vga0->VSIZE, pCore->MasterShell->vga0->VFP, pCore->MasterShell->vga0->VSYNC, pCore->MasterShell->vga0->VBP
+    );
+
+    uart_init(
+        &pCore->i_uart_rx, &pCore->o_uart_tx, &pCore->i_clk,
+        pCore->MasterShell->uartmaster0->SYS_FREQ/pCore->MasterShell->uartmaster0->BAUDRATE
+    );
 
     reset();
+
+    uart_send("L0001W1424344454RR");
 
     while(1) {
         static int old_clk = 0;
@@ -145,13 +135,11 @@ int main(int argc, char *argv[]) {
         }
         old_clk = pCore->i_clk;
 
-#if defined(TRACE_ON)
-        if (pCore->MonoVgaText->y == 32) {
-            printf("Ende\n");
-            vga_wait_keypress();
-            break;
-        }
-#endif
+        // if (pCore->MasterShell->y == 32) {
+        //     printf("Ende\n");
+        //     vga_wait_keypress();
+        //     break;
+        // }
     }
 
     vga_close();

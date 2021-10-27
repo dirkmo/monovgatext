@@ -21,7 +21,8 @@ module MasterShell(
 wire [15:0] vgamaster_addr;
 wire vgamaster_cs;
 wire vgamaster_access;
-reg vgaslave_cs;
+reg  vgaslave_cs;
+wire [7:0] o_vgaslave_dat;
 
 wire [7:0] uartmaster_dat;
 wire [15:0] uartmaster_addr;
@@ -64,8 +65,8 @@ UartMaster uartmaster0(
     .i_ack(uartmaster_ack),
     .o_we(uartmaster_we),
     .o_cs(uartmaster_cs),
-    .i_uart_rx(uart_rx),
-    .o_uart_tx(uart_tx)
+    .i_uart_rx(i_uart_rx),
+    .o_uart_tx(o_uart_tx)
 );
 
 assign          o_dat =  vgaslave_cs ? o_vgaslave_dat : uartmaster_dat;

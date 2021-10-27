@@ -13,7 +13,13 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}-O0 -g")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g")
 
 # Create a new executable target that will contain all your sources
-add_executable(simulation sim/sim.cpp sim/vga.cpp sim/IBM_VGA_8x16.c)
+add_executable(
+  simulation
+  sim/sim.cpp
+  sim/vga.cpp
+  sim/IBM_VGA_8x16.c
+  sim/uart.cpp
+)
 
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS})

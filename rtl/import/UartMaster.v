@@ -15,7 +15,7 @@ module UartMaster(
 
 parameter
     BAUDRATE /* verilator public */ = 115200,
-    SYS_FREQ /* verilator public */ = 25000000;
+    SYS_FREQ /* verilator public */ = 2500000;
 
 wire uart_tx_ready;
 wire uart_tx_pulse;
