@@ -185,20 +185,22 @@ end
 
 // A character is 8 pixels wide. Every char needs 2 memory accesses:
 // First access: Fetch char from screen memory, trigger: fetch_char_from_screen
-// Second access: Fetch byte from font which represents a line of 8 pixels of current char, trigger: fetch_fontline
+// Second access: Fetch byte from font which represents a line of 8 pixels of current char, trigger: output_address_fontline
 // Both accesses must be finished before the first pixel of the character is drawn
 
 // start_fetch
 // Triggers one cycle earlier to prepare the multi-busmaster module that this module wants memory access.
-wire start_fetch = (isVisible && (x[2:0] == 3'b101)) || (isVisible_y && (x==5));
+wire start_fetch = (isVisible && (x[2:0] == 3'b100)) || (isVisible_y && (x==4));
 
 reg fetch_char_from_screen;
+reg output_address_fontline;
 reg fetch_fontline;
 
 always @(posedge i_clk)
 begin
     fetch_char_from_screen <= start_fetch;
-    fetch_fontline <= fetch_char_from_screen;
+    output_address_fontline <= fetch_char_from_screen;
+    fetch_fontline <= output_address_fontline;
 end
 
 
@@ -265,11 +267,9 @@ end
 // ----------------------------------------------------------------------------
 // vga memory interface
 
-assign o_vgaram_cs   = fetch_fontline || fetch_char_from_screen;
+assign o_vgaram_cs   = output_address_fontline || fetch_char_from_screen;
 
-assign o_vgaram_addr = fetch_fontline         ? font_addr :
-                       fetch_char_from_screen ? screen_addr
-                                              : 16'h00;
+assign o_vgaram_addr = output_address_fontline ? font_addr : screen_addr;
 
 // o_vgaram_access informs the multi-bus-master that the vga module wants
 // memory access in the next clock cycle

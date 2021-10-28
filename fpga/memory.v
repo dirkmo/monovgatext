@@ -11,8 +11,7 @@ module memory(
 reg [7:0] mem[0:'h1fff];
 
 always @(posedge i_clk)
-    if (i_cs && ~i_we)
-        o_dat <= mem[i_addr[12:0]];
+    o_dat <= mem[i_addr[12:0]];
 
 always @(posedge i_clk)
 begin
