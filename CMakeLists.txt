@@ -26,10 +26,12 @@ include_directories(${SDL2_INCLUDE_DIRS})
 target_link_libraries(simulation PRIVATE ${SDL2_LIBRARIES})
 
 # Add the Verilated circuit to the target
-verilate(simulation COVERAGE TRACE
+verilate(simulation TRACE
   INCLUDE_DIRS "sim/"
-  VERILATOR_ARGS -CFLAGS "-g" -trace -O0 -x-assign 0 +librescan +libext+.v -y rtl/ --top-module MasterShell
-  SOURCES rtl/MasterShell.v
+  VERILATOR_ARGS -CFLAGS "-g" -trace -O0 -x-assign 0 +define+SIM=1 +librescan +libext+.v -y rtl/ --top-module top
+  SOURCES fpga/top.v
+          fpga/memory.v
+          rtl/MasterShell.v
           rtl/MonoVgaText.v
           rtl/import/UartMaster.v
           rtl/import/uart_rx.v

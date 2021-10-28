@@ -2,7 +2,7 @@ module MasterShell(
     input             i_clk,
     input             i_reset,
     input      [7:0]  i_dat,
-    output reg [7:0]  o_dat,
+    output     [7:0]  o_dat,
     output    [15:0]  o_addr,
     output            o_cs,
     output            o_we,
@@ -21,7 +21,7 @@ module MasterShell(
 wire [15:0] vgamaster_addr;
 wire vgamaster_cs;
 wire vgamaster_access;
-reg  vgaslave_cs;
+wire vgaslave_cs;
 wire [7:0] o_vgaslave_dat;
 
 wire [7:0] uartmaster_dat;
@@ -56,7 +56,7 @@ MonoVgaText vga0(
     .o_pixel(o_pixel)
 );
 
-UartMaster uartmaster0(
+UartMaster #(.BAUDRATE(115200),.SYS_FREQ(25000000)) uartmaster0(
     .i_clk(i_clk),
     .i_reset(i_reset),
     .i_data(i_dat),

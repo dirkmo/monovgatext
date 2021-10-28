@@ -1,11 +1,11 @@
 #include <stdint.h>
 #include <string.h>
 #include <verilated_vcd_c.h>
-#include "VMasterShell.h"
-#include "VMasterShell_MasterShell.h"
-#include "VMasterShell_MonoVgaText.h"
-#include "VMasterShell_UartMaster.h"
 #include "verilated.h"
+#include "Vtop.h"
+#include "Vtop_top.h"
+#include "Vtop_MasterShell.h"
+#include "Vtop_MonoVgaText.h"
 
 #include "IBM_VGA_8x16.h"
 #include "vga.h"
@@ -15,7 +15,7 @@
 using namespace std;
 
 VerilatedVcdC *pTrace = NULL;
-VMasterShell *pCore;
+Vtop *pCore;
 
 uint64_t tickcount = 0;
 uint64_t ts = 1000;
@@ -36,7 +36,7 @@ void opentrace(const char *vcdname) {
 void tick() {
     tickcount += ts;
     if ((tickcount % (ts)) == 0) {
-        pCore->i_clk = !pCore->i_clk;
+        pCore->clk100mhz = !pCore->clk100mhz;
     }
     pCore->eval();
     if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
@@ -45,22 +45,22 @@ void tick() {
 void fasttick() {
     pCore->eval();
     tickcount += ts;
-    pCore->i_clk = 0;
+    pCore->clk100mhz = 0;
     pCore->eval();
     tickcount += ts;
-    pCore->i_clk = 1;
+    pCore->clk100mhz = 1;
     pCore->eval();
-    pCore->i_clk = 0;
+    pCore->clk100mhz = 0;
     pCore->eval();
     if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
 }
 
 void reset() {
-    pCore->i_reset = 1;
+    pCore->reset_n = 0;
     for ( int i = 0; i < 20; i++) {
         tick();
     }
-    pCore->i_reset = 0;
+    pCore->reset_n = 1;
 }
 
 void initialize_memory(void) {
@@ -72,30 +72,16 @@ void initialize_memory(void) {
     mem[SCREEN_BASE+80*30-1] = 'X';
 }
 
-void handle(VMasterShell *pCore) {
-    int clk = -1;
-    if (clk != pCore->i_clk) {
-        if(pCore->o_cs) {
-            if (pCore->o_we) {
-                mem[pCore->o_addr] = pCore->o_dat;
-            } else {
-                pCore->i_dat = mem[pCore->o_addr];
-            }
-        } else {
-            pCore->i_dat = 0;
-        }
-        pCore->i_ack = pCore->o_cs;
-    }
+void handle(Vtop *pCore) {
     int rxbyte;
     if (uart_handle(&rxbyte)) {
         printf("UART: %c\n",rxbyte);
     }
-    clk = pCore->i_clk;
 }
 
 int main(int argc, char *argv[]) {
     Verilated::traceEverOn(true);
-    pCore = new VMasterShell();
+    pCore = new Vtop();
 
     if (argc > 1) {
         if( string(argv[1]) == "-t" ) {
@@ -107,33 +93,33 @@ int main(int argc, char *argv[]) {
     initialize_memory();
 
     vga_init(
-        pCore->MasterShell->vga0->HSIZE, pCore->MasterShell->vga0->HFP, pCore->MasterShell->vga0->HSYNC, pCore->MasterShell->vga0->HBP,
-        pCore->MasterShell->vga0->VSIZE, pCore->MasterShell->vga0->VFP, pCore->MasterShell->vga0->VSYNC, pCore->MasterShell->vga0->VBP
+        pCore->top->master0->vga0->HSIZE, pCore->top->master0->vga0->HFP, pCore->top->master0->vga0->HSYNC, pCore->top->master0->vga0->HBP,
+        pCore->top->master0->vga0->VSIZE, pCore->top->master0->vga0->VFP, pCore->top->master0->vga0->VSYNC, pCore->top->master0->vga0->VBP
     );
 
     uart_init(
-        &pCore->i_uart_rx, &pCore->o_uart_tx, &pCore->i_clk,
-        pCore->MasterShell->uartmaster0->SYS_FREQ/pCore->MasterShell->uartmaster0->BAUDRATE
+        &pCore->uart_rx, &pCore->uart_tx, &pCore->top->clk25mhz,
+        25000000/115200
     );
 
     reset();
 
-    uart_send("L0001W1424344454RR");
+    // uart_send("L0001W1424344454RR");
 
     while(1) {
-        static int old_clk = 0;
+        static int old_clk = -1;
         tick();
         handle(pCore);
 
-        if (pCore->i_clk != old_clk) {
-            if (pCore->i_clk) {
-                int ret = vga_handle(pCore->o_pixel, !pCore->o_hsync, !pCore->o_vsync);
+        if (pCore->top->clk25mhz != old_clk) {
+            if (pCore->top->clk25mhz) {
+                int ret = vga_handle(pCore->red&1, !pCore->hsync, !pCore->vsync);
                 if (ret == -1) {
                     break;
                 }
             }
         }
-        old_clk = pCore->i_clk;
+        old_clk = pCore->top->clk25mhz;
 
         // if (pCore->MasterShell->y == 32) {
         //     printf("Ende\n");

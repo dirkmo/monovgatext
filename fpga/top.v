@@ -12,10 +12,18 @@ module top(
     input uart_rx
 );
 
-wire clk25mhz;
+wire clk25mhz /* verilator public */;
+
+`ifdef SIM
+reg [1:0] counter;
+always @(posedge clk100mhz)
+    counter <= counter + 1'b1;
+assign clk25mhz = counter[1];
+`else
 wire pll_locked;
 // icepll -i 100 -o 25 -m -f pll.v
 pll pll0(clk100mhz, clk25mhz, pll_locked);
+`endif
 
 wire [15:0] addr;
 wire [ 7:0] dat_from_mem;
@@ -23,6 +31,8 @@ wire [ 7:0] dat_from_master;
 wire vga_cs;
 wire pix;
 wire cs;
+wire ack;
+wire we;
 
 MasterShell master0(
     .i_clk(clk25mhz),
@@ -32,7 +42,7 @@ MasterShell master0(
     .o_addr(addr),
     .o_cs(cs),
     .o_we(we),
-    .i_ack(1'b1),
+    .i_ack(ack),
     .o_hsync(hsync),
     .o_vsync(vsync),
     .o_pixel(pix),
@@ -46,7 +56,8 @@ memory mem0(
     .i_dat(dat_from_master),
     .o_dat(dat_from_mem),
     .i_we(we),
-    .i_cs(cs)
+    .i_cs(cs),
+    .o_ack(ack)
 );
 
 assign red[2:0]   = {pix,pix,pix};

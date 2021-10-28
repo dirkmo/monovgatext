@@ -238,16 +238,18 @@ wire on_cursor_position = (r_screen_addr_rel == r_cursor_addr) && blink[23];
 // Fontline read-out
 
 // font memory address generation
-reg  [11:0] r_font_addr_rel;
-wire [15:0] font_addr = { r_font_base[15:12], r_font_addr_rel[11:0] };
+wire [11:0] font_addr_rel;
+wire [15:0] font_addr = { r_font_base[15:12], font_addr_rel[11:0] };
 wire [7:0] character = on_cursor_position ? r_cursor : i_vgaram_dat;
 
-always @(posedge i_clk)
-begin
-    if (fetch_char_from_screen) begin
-        r_font_addr_rel <= { character, y[3:0] };
-    end
-end
+assign font_addr_rel = { character, y[3:0] };
+
+// always @(posedge i_clk)
+// begin
+    // if (fetch_char_from_screen) begin
+        // r_font_addr_rel <= { character, y[3:0] };
+    // end
+// end
 
 // the pixels of the current charecter line
 reg [7:0] r_fontline;
