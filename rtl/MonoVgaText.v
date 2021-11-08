@@ -2,16 +2,16 @@ module MonoVgaText(
     input             i_clk,
     input             i_reset,
 
-    output     [15:0] o_vgaram_addr,
-    input      [7:0]  i_vgaram_dat,
-    output            o_vgaram_cs,
-    output            o_vgaram_access,
+    output     [15:0] o_vgamaster_addr,
+    input      [7:0]  i_vgamaster_dat,
+    output            o_vgamaster_cs,
+    output            o_vgamaster_access,
 
-    input      [7:0]  i_dat,
-    output reg [7:0]  o_dat,
-    input      [1:0]  i_addr,
-    input             i_cs,
-    input             i_we,
+    input      [7:0]  i_vgaslave_dat,
+    output reg [7:0]  o_vgaslave_dat,
+    input      [1:0]  i_vgaslave_addr,
+    input             i_vgaslave_cs,
+    input             i_vgaslave_we,
 
     output reg        o_hsync,
     output reg        o_vsync,
@@ -156,24 +156,24 @@ reg [11: 0] r_cursor_addr = 12'd0;
 // 2: Cursor address low byte [7:0]
 // 3: Cursor address high byte [11:8]
 
-always @(*)
-    case (i_addr)
-        2'h0: o_dat = {r_font_base[15:12], r_screen_base [15:12]};
-        2'h1: o_dat = r_cursor;
-        2'h2: o_dat = r_cursor_addr[ 7:0];
-        2'h3: o_dat = { 4'h0, r_cursor_addr[11:8]};
+always @(posedge i_clk)
+    case (i_vgaslave_addr)
+        2'h0: o_vgaslave_dat <= {r_font_base[15:12], r_screen_base [15:12]};
+        2'h1: o_vgaslave_dat <= r_cursor;
+        2'h2: o_vgaslave_dat <= r_cursor_addr[ 7:0];
+        2'h3: o_vgaslave_dat <= { 4'h0, r_cursor_addr[11:8]};
     endcase
 
 always @(posedge i_clk)
 begin
-    if (i_cs)
+    if (i_vgaslave_cs)
     begin
-        if (i_we) begin
-            case (i_addr)
-                2'h0: {r_font_base[15:12], r_screen_base [15:12]} <= i_dat[7:0];
-                2'h1: r_cursor <= i_dat;
-                2'h2: r_cursor_addr[ 7:0] <= i_dat;
-                2'h3: r_cursor_addr[11:8] <= i_dat[3:0];
+        if (i_vgaslave_we) begin
+            case (i_vgaslave_addr)
+                2'h0: {r_font_base[15:12], r_screen_base [15:12]} <= i_vgaslave_dat[7:0];
+                2'h1: r_cursor <= i_vgaslave_dat;
+                2'h2: r_cursor_addr[ 7:0] <= i_vgaslave_dat;
+                2'h3: r_cursor_addr[11:8] <= i_vgaslave_dat[3:0];
             endcase
         end
     end
@@ -184,25 +184,32 @@ end
 // read data from memory in two consecutive ram accesses
 
 // A character is 8 pixels wide. Every char needs 2 memory accesses:
-// First access: Fetch char from screen memory, trigger: fetch_char_from_screen
-// Second access: Fetch byte from font which represents a line of 8 pixels of current char, trigger: output_address_fontline
+// First access: Fetch char from screen memory
+// Second access: Fetch byte from font which represents a line of 8 pixels of current char ("fontline")
 // Both accesses must be finished before the first pixel of the character is drawn
+
+// phase 0: output screen addr
+// phase 1: fetch character from data bus
+// phase 2: output fontline address (dependent on character)
+// phase 3: fetch fontline
 
 // start_fetch
 // Triggers one cycle earlier to prepare the multi-busmaster module that this module wants memory access.
 wire start_fetch = (isVisible && (x[2:0] == 3'b100)) || (isVisible_y && (x==4));
 
-reg fetch_char_from_screen;
-reg output_address_fontline;
-reg fetch_fontline;
-
+reg [3:0] r_phases;
 always @(posedge i_clk)
 begin
-    fetch_char_from_screen <= start_fetch;
-    output_address_fontline <= fetch_char_from_screen;
-    fetch_fontline <= output_address_fontline;
+    if (start_fetch)
+        r_phases <= 4'b0001;
+    else
+        r_phases <= { r_phases[2:0], 1'b0 };
 end
 
+wire output_addr_char_from_screen = r_phases[0];
+wire       fetch_char_from_screen = r_phases[1];
+wire      output_address_fontline = r_phases[2];
+wire               fetch_fontline = r_phases[3];
 
 // ----------------------------------------------------------------------------
 // screen memory address generation
@@ -241,17 +248,18 @@ wire on_cursor_position = (r_screen_addr_rel == r_cursor_addr) && blink[23];
 
 // font memory address generation
 wire [11:0] font_addr_rel;
-wire [15:0] font_addr = { r_font_base[15:12], font_addr_rel[11:0] };
-wire [7:0] character = on_cursor_position ? r_cursor : i_vgaram_dat;
+wire [15:0] font_addr = { r_font_base[15:12], r_font_addr_rel[11:0] };
+wire [7:0] character = on_cursor_position ? r_cursor : i_vgamaster_dat;
 
-assign font_addr_rel = { character, y[3:0] };
+// assign font_addr_rel = { character, y[3:0] };
 
-// always @(posedge i_clk)
-// begin
-    // if (fetch_char_from_screen) begin
-        // r_font_addr_rel <= { character, y[3:0] };
-    // end
-// end
+reg [11:0] r_font_addr_rel;
+always @(posedge i_clk)
+begin
+    if (fetch_char_from_screen) begin
+        r_font_addr_rel <= { character, y[3:0] };
+    end
+end
 
 // the pixels of the current charecter line
 reg [7:0] r_fontline;
@@ -260,20 +268,21 @@ always @(posedge i_clk)
 begin
     if (fetch_fontline)
     begin
-        r_fontline <= i_vgaram_dat;
+        r_fontline <= i_vgamaster_dat;
     end
 end
 
 // ----------------------------------------------------------------------------
 // vga memory interface
 
-assign o_vgaram_cs   = output_address_fontline || fetch_char_from_screen;
+assign o_vgamaster_cs   = output_address_fontline || output_addr_char_from_screen;
 
-assign o_vgaram_addr = output_address_fontline ? font_addr : screen_addr;
+assign o_vgamaster_addr = output_address_fontline      ? font_addr :
+                          output_addr_char_from_screen ? screen_addr : 16'h00;
 
-// o_vgaram_access informs the multi-bus-master that the vga module wants
+// o_vgamaster_access informs the multi-bus-master that the vga module wants
 // memory access in the next clock cycle
-assign o_vgaram_access = start_fetch || fetch_char_from_screen;
+assign o_vgamaster_access = r_phases[0] || r_phases[1];
 
 // ----------------------------------------------------------------------------
 
