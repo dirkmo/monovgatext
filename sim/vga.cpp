@@ -1,4 +1,4 @@
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include "vga.h"
 
 static SDL_Window *win = NULL;

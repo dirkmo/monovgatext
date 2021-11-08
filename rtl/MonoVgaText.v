@@ -282,7 +282,7 @@ assign o_vgamaster_addr = output_address_fontline      ? font_addr :
 
 // o_vgamaster_access informs the multi-bus-master that the vga module wants
 // memory access in the next clock cycle
-assign o_vgamaster_access = r_phases[0] || r_phases[1];
+assign o_vgamaster_access = start_fetch || r_phases[1];
 
 // ----------------------------------------------------------------------------
 
