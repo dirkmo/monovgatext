@@ -12,6 +12,7 @@ module MonoVgaText(
     input      [1:0]  i_vgaslave_addr,
     input             i_vgaslave_cs,
     input             i_vgaslave_we,
+    output reg        o_vgaslave_ack,
 
     output reg        o_hsync,
     output reg        o_vsync,
@@ -179,6 +180,8 @@ begin
     end
 end
 
+always @(posedge i_clk)
+    o_vgaslave_ack <= i_vgaslave_cs;
 
 // ----------------------------------------------------------------------------
 // read data from memory in two consecutive ram accesses

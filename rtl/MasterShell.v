@@ -51,6 +51,7 @@ MonoVgaText vga0(
     .i_vgaslave_addr(o_addr[1:0]),
     .i_vgaslave_cs(vgaslave_cs),
     .i_vgaslave_we(o_we),
+    .o_vgaslave_ack(),
     .o_hsync(o_hsync),
     .o_vsync(o_vsync),
     .o_pixel(o_pixel)
