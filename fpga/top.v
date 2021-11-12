@@ -26,8 +26,8 @@ pll pll0(clk100mhz, clk25mhz, pll_locked);
 `endif
 
 wire [15:0] addr;
-wire [ 7:0] dat_from_mem;
-wire [ 7:0] dat_from_master;
+wire [15:0] dat_from_mem;
+wire [15:0] dat_from_master;
 wire vga_cs;
 wire pix;
 wire cs;

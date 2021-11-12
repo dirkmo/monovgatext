@@ -3,13 +3,13 @@ module MonoVgaText(
     input             i_reset,
 
     output     [15:0] o_vgamaster_addr,
-    input      [7:0]  i_vgamaster_dat,
+    input      [15:0] i_vgamaster_dat,
     output            o_vgamaster_cs,
     output            o_vgamaster_access,
 
-    input      [7:0]  i_vgaslave_dat,
-    output reg [7:0]  o_vgaslave_dat,
-    input      [1:0]  i_vgaslave_addr,
+    input      [15:0] i_vgaslave_dat,
+    output reg [15:0] o_vgaslave_dat,
+    input       [1:0] i_vgaslave_addr,
     input             i_vgaslave_cs,
     input             i_vgaslave_we,
     output reg        o_vgaslave_ack,
@@ -146,23 +146,23 @@ end
 // ----------------------------------------------------------------------------
 // CPU databus interface
 
-reg [15:12] r_font_base = FONT_BASE_INITIAL; // base address of fonts
+reg [15:12] r_font_base   = FONT_BASE_INITIAL; // base address of fonts
 reg [15:12] r_screen_base = SCREEN_BASE_INITIAL; // base address of screen
-reg [ 7: 0] r_cursor = 8'd219;
+reg [ 7: 0] r_cursor      = 8'd219;
 reg [11: 0] r_cursor_addr = 12'd0;
 
 // register map
-// 0: [7:4] font address, [3:0] screen address
-// 1: Cursor character index
-// 2: Cursor address low byte [7:0]
-// 3: Cursor address high byte [11:8]
+// 0: [11:8] font address, [3:0] screen address
+// 1:  [7:0] Cursor character index
+// 2: [11:0] Cursor address [7:0]
+// 3: n/a
 
 always @(posedge i_clk)
     case (i_vgaslave_addr)
-        2'h0: o_vgaslave_dat <= {r_font_base[15:12], r_screen_base [15:12]};
-        2'h1: o_vgaslave_dat <= r_cursor;
-        2'h2: o_vgaslave_dat <= r_cursor_addr[ 7:0];
-        2'h3: o_vgaslave_dat <= { 4'h0, r_cursor_addr[11:8]};
+        2'h0: o_vgaslave_dat <= {4'h0, r_font_base[15:12], 4'h0, r_screen_base [15:12]};
+        2'h1: o_vgaslave_dat <= {8'h00, r_cursor};
+        2'h2: o_vgaslave_dat <= {4'h0, r_cursor_addr[11:0]};
+        2'h3: o_vgaslave_dat <= 16'h0000;
     endcase
 
 always @(posedge i_clk)
@@ -173,8 +173,8 @@ begin
             case (i_vgaslave_addr)
                 2'h0: {r_font_base[15:12], r_screen_base [15:12]} <= i_vgaslave_dat[7:0];
                 2'h1: r_cursor <= i_vgaslave_dat;
-                2'h2: r_cursor_addr[ 7:0] <= i_vgaslave_dat;
-                2'h3: r_cursor_addr[11:8] <= i_vgaslave_dat[3:0];
+                2'h2: r_cursor_addr <= i_vgaslave_dat[11:0];
+                2'h3: ;
             endcase
         end
     end
@@ -186,13 +186,13 @@ always @(posedge i_clk)
 // ----------------------------------------------------------------------------
 // read data from memory in two consecutive ram accesses
 
-// A character is 8 pixels wide. Every char needs 2 memory accesses:
-// First access: Fetch char from screen memory
+// A character is 8 pixels wide. Every char needs 2 memory accesses per line:
+// First access: Fetch two chars from screen memory
 // Second access: Fetch byte from font which represents a line of 8 pixels of current char ("fontline")
 // Both accesses must be finished before the first pixel of the character is drawn
 
 // phase 0: output screen addr
-// phase 1: fetch character from data bus
+// phase 1: fetch characters from data bus
 // phase 2: output fontline address (dependent on character)
 // phase 3: fetch fontline
 
@@ -252,17 +252,16 @@ wire on_cursor_position = (r_screen_addr_rel == r_cursor_addr) && blink[23];
 // font memory address generation
 wire [11:0] font_addr_rel;
 wire [15:0] font_addr = { r_font_base[15:12], r_font_addr_rel[11:0] };
-wire [7:0] character = on_cursor_position ? r_cursor : i_vgamaster_dat;
 
-// assign font_addr_rel = { character, y[3:0] };
-
-reg [11:0] r_font_addr_rel;
+reg [15:0] characters;
 always @(posedge i_clk)
-begin
-    if (fetch_char_from_screen) begin
-        r_font_addr_rel <= { character, y[3:0] };
-    end
-end
+    characters <= i_vgamaster_dat;
+
+wire [7:0] char = on_cursor_position ? r_cursor :
+                                x[3] ? characters[15:8] : characters[7:0];
+
+assign font_addr_rel = {  char, y[3:0] };
+
 
 // the pixels of the current charecter line
 reg [7:0] r_fontline;
@@ -271,7 +270,7 @@ always @(posedge i_clk)
 begin
     if (fetch_fontline)
     begin
-        r_fontline <= i_vgamaster_dat;
+        r_fontline <= x[3] ? i_vgamaster_dat[15:8] : i_vgamaster_dat[7:0];
     end
 end
 

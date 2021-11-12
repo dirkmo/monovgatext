@@ -63,15 +63,6 @@ void reset() {
     pCore->reset_n = 1;
 }
 
-void initialize_memory(void) {
-    memset(mem, 0, sizeof(mem));
-    memcpy(&mem[FONT_BASE], &IBM_VGA_8x16[0], sizeof(IBM_VGA_8x16));
-    strcpy((char*)&mem[SCREEN_BASE], "Hello, World!");
-    strcpy((char*)&mem[SCREEN_BASE+5*80+60], "Dies ist ein Zeilenumbruchtest. Funktioniert!");
-    strcpy((char*)&mem[SCREEN_BASE+80*29], "Letzte Zeile");
-    mem[SCREEN_BASE+80*30-1] = 'X';
-}
-
 void handle(Vtop *pCore) {
     int rxbyte;
     if (uart_handle(&rxbyte)) {

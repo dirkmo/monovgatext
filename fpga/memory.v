@@ -8,7 +8,7 @@ module memory(
     output reg       o_ack
 );
 
-reg [7:0] mem[0:'h1fff];
+reg [15:0] mem[0:'h1fff];
 
 always @(posedge i_clk)
     o_dat <= mem[i_addr[12:0]];

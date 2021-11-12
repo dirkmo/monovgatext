@@ -1,8 +1,8 @@
 module MasterShell(
     input             i_clk,
     input             i_reset,
-    input      [7:0]  i_dat,
-    output     [7:0]  o_dat,
+    input     [15:0]  i_dat,
+    output    [15:0]  o_dat,
     output    [15:0]  o_addr,
     output            o_cs,
     output            o_we,
@@ -22,9 +22,9 @@ wire [15:0] vgamaster_addr;
 wire vgamaster_cs;
 wire vgamaster_access;
 wire vgaslave_cs;
-wire [7:0] o_vgaslave_dat;
+wire [15:0] o_vgaslave_dat;
 
-wire [7:0] uartmaster_dat;
+wire [15:0] uartmaster_dat;
 wire [15:0] uartmaster_addr;
 wire uartmaster_ack;
 wire uartmaster_we;
