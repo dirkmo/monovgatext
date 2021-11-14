@@ -33,8 +33,9 @@ verilate(simulation TRACE
           fpga/memory.v
           rtl/MasterShell.v
           rtl/MonoVgaText.v
-          rtl/import/UartMaster.v
+          rtl/import/UartMasterSlave.v
           rtl/import/uart_rx.v
           rtl/import/uart_tx.v
           rtl/import/UartProtocol.v
+          rtl/import/fifo.v
 )

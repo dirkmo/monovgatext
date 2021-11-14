@@ -20,11 +20,6 @@ Vtop *pCore;
 uint64_t tickcount = 0;
 uint64_t ts = 1000;
 
-uint8_t mem[0x10000];
-
-#define FONT_BASE   0x0000
-#define SCREEN_BASE 0x1000
-
 void opentrace(const char *vcdname) {
     if (!pTrace) {
         pTrace = new VerilatedVcdC;
@@ -80,8 +75,6 @@ int main(int argc, char *argv[]) {
             opentrace("trace.vcd");
         }
     }    
-
-    initialize_memory();
 
     vga_init(
         pCore->top->master0->vga0->HSIZE, pCore->top->master0->vga0->HFP, pCore->top->master0->vga0->HSYNC, pCore->top->master0->vga0->HBP,

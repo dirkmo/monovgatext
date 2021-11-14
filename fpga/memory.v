@@ -1,11 +1,11 @@
 module memory(
-    input            i_clk,
-    input     [12:0] i_addr,
-    input      [7:0] i_dat,
-    output reg [7:0] o_dat,
-    input            i_we,
-    input            i_cs,
-    output reg       o_ack
+    input             i_clk,
+    input      [12:0] i_addr,
+    input      [15:0] i_dat,
+    output reg [15:0] o_dat,
+    input             i_we,
+    input             i_cs,
+    output reg        o_ack
 );
 
 reg [15:0] mem[0:'h1fff];

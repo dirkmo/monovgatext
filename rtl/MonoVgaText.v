@@ -171,8 +171,8 @@ begin
     begin
         if (i_vgaslave_we) begin
             case (i_vgaslave_addr)
-                2'h0: {r_font_base[15:12], r_screen_base [15:12]} <= i_vgaslave_dat[7:0];
-                2'h1: r_cursor <= i_vgaslave_dat;
+                2'h0: {r_font_base[15:12], r_screen_base [15:12]} <= {i_vgaslave_dat[11:8], i_vgaslave_dat[3:0]};
+                2'h1: r_cursor <= i_vgaslave_dat[7:0];
                 2'h2: r_cursor_addr <= i_vgaslave_dat[11:0];
                 2'h3: ;
             endcase
@@ -251,7 +251,7 @@ wire on_cursor_position = (r_screen_addr_rel == r_cursor_addr) && blink[23];
 
 // font memory address generation
 wire [11:0] font_addr_rel;
-wire [15:0] font_addr = { r_font_base[15:12], r_font_addr_rel[11:0] };
+wire [15:0] font_addr = { r_font_base[15:12], font_addr_rel[11:0] };
 
 reg [15:0] characters;
 always @(posedge i_clk)

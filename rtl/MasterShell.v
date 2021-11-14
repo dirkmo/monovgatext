@@ -57,17 +57,25 @@ MonoVgaText vga0(
     .o_pixel(o_pixel)
 );
 
-UartMaster #(.BAUDRATE(115200),.SYS_FREQ(25000000)) uartmaster0(
+UartMasterSlave #(.BAUDRATE(115200),.SYS_FREQ(25000000)) uartmaster0(
     .i_clk(i_clk),
     .i_reset(i_reset),
-    .i_data(i_dat),
-    .o_data(uartmaster_dat),
-    .o_addr(uartmaster_addr),
-    .i_ack(uartmaster_ack),
-    .o_we(uartmaster_we),
-    .o_cs(uartmaster_cs),
+    .i_master_data(i_dat),
+    .o_master_data(uartmaster_dat),
+    .o_master_addr(uartmaster_addr),
+    .i_master_ack(uartmaster_ack),
+    .o_master_we(uartmaster_we),
+    .o_master_cs(uartmaster_cs),
+    .i_slave_data(),
+    .o_slave_data(),
+    .i_slave_addr(0),
+    .o_slave_ack(),
+    .i_slave_we(0),
+    .i_slave_cs(0),
+    .o_int(),
     .i_uart_rx(i_uart_rx),
-    .o_uart_tx(o_uart_tx)
+    .o_uart_tx(o_uart_tx),
+    .o_reset()
 );
 
 assign          o_dat =  vgaslave_cs ? o_vgaslave_dat : uartmaster_dat;
