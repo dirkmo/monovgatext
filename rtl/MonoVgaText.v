@@ -209,8 +209,8 @@ begin
         r_phases <= { r_phases[2:0], 1'b0 };
 end
 
-wire output_addr_char_from_screen = r_phases[0];
-wire       fetch_char_from_screen = r_phases[1];
+wire output_addr_char_from_screen = r_phases[0] && ~x[3];
+wire       fetch_char_from_screen = r_phases[1] && ~x[3];
 wire      output_address_fontline = r_phases[2];
 wire               fetch_fontline = r_phases[3];
 
@@ -258,7 +258,7 @@ always @(posedge i_clk)
     characters <= i_vgamaster_dat;
 
 wire [7:0] char = on_cursor_position ? r_cursor :
-                                x[3] ? characters[15:8] : characters[7:0];
+                    (x[3:0] == 4'h6) ? characters[15:8] : characters[7:0];
 
 assign font_addr_rel = {  char, y[3:0] };
 

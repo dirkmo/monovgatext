@@ -24,8 +24,8 @@ always @(posedge i_clk)
     o_ack <= i_cs;
 
 initial begin
-    $readmemh("font.mem", mem, 0);
-    $readmemh("screen.mem", mem, 4096);
+    $readmemh("font16.mem", mem, 0);
+    $readmemh("screen16.mem", mem, 4096);
 end
 
 endmodule
