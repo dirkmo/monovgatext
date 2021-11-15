@@ -264,7 +264,7 @@ always @(posedge i_clk)
 begin
     if (fetch_fontline)
     begin
-        r_fontline <= font_addr[0] ? i_vgamaster_dat[15:8] : i_vgamaster_dat[7:0];
+        r_fontline <= font_addr[0] ? i_vgamaster_dat[7:0] : i_vgamaster_dat[15:8];
     end
 end
 
