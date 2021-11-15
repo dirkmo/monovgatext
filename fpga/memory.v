@@ -25,7 +25,7 @@ always @(posedge i_clk)
 
 initial begin
     $readmemh("font16.mem", mem, 0);
-    $readmemh("screen16.mem", mem, 4096);
+    $readmemh("screen16.mem", mem, 2048);
 end
 
 endmodule

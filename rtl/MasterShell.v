@@ -18,7 +18,7 @@ module MasterShell(
     output            o_uart_tx
 );
 
-wire [15:0] vgamaster_addr;
+wire [11:0] vgamaster_addr;
 wire vgamaster_cs;
 wire vgamaster_access;
 wire vgaslave_cs;
@@ -48,7 +48,7 @@ MonoVgaText vga0(
     // vga bus slave
     .i_vgaslave_dat(i_dat),
     .o_vgaslave_dat(o_vgaslave_dat),
-    .i_vgaslave_addr(o_addr[1:0]),
+    .i_vgaslave_addr(o_addr[0]),
     .i_vgaslave_cs(vgaslave_cs),
     .i_vgaslave_we(o_we),
     .o_vgaslave_ack(),
@@ -79,7 +79,7 @@ UartMasterSlave #(.BAUDRATE(115200),.SYS_FREQ(25000000)) uartmaster0(
 );
 
 assign          o_dat =  vgaslave_cs ? o_vgaslave_dat : uartmaster_dat;
-assign         o_addr = r_vga_active ? vgamaster_addr : uartmaster_addr;
+assign         o_addr = r_vga_active ? {4'h0, vgamaster_addr} : uartmaster_addr;
 assign           o_we = r_vga_active ? 1'b0 : uartmaster_we;
 assign           o_cs = r_vga_active ? vgamaster_cs : 
                          vgaslave_cs ? 1'b0 : uartmaster_cs;

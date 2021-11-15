@@ -2,14 +2,14 @@ module MonoVgaText(
     input             i_clk,
     input             i_reset,
 
-    output     [15:0] o_vgamaster_addr,
+    output     [11:0] o_vgamaster_addr,
     input      [15:0] i_vgamaster_dat,
     output            o_vgamaster_cs,
     output            o_vgamaster_access,
 
     input      [15:0] i_vgaslave_dat,
     output reg [15:0] o_vgaslave_dat,
-    input       [1:0] i_vgaslave_addr,
+    input             i_vgaslave_addr,
     input             i_vgaslave_cs,
     input             i_vgaslave_we,
     output reg        o_vgaslave_ack,
@@ -146,23 +146,17 @@ end
 // ----------------------------------------------------------------------------
 // CPU databus interface
 
-reg [15:12] r_font_base   = FONT_BASE_INITIAL; // base address of fonts
-reg [15:12] r_screen_base = SCREEN_BASE_INITIAL; // base address of screen
 reg [ 7: 0] r_cursor      = 8'd219;
 reg [11: 0] r_cursor_addr = 12'd0;
 
 // register map
-// 0: [11:8] font address, [3:0] screen address
-// 1:  [7:0] Cursor character index
-// 2: [11:0] Cursor address [7:0]
-// 3: n/a
+// 0:  [7:0] Cursor character index
+// 1: [11:0] Cursor address [7:0]
 
 always @(posedge i_clk)
     case (i_vgaslave_addr)
-        2'h0: o_vgaslave_dat <= {4'h0, r_font_base[15:12], 4'h0, r_screen_base [15:12]};
-        2'h1: o_vgaslave_dat <= {8'h00, r_cursor};
-        2'h2: o_vgaslave_dat <= {4'h0, r_cursor_addr[11:0]};
-        2'h3: o_vgaslave_dat <= 16'h0000;
+        1'h0: o_vgaslave_dat <= {8'h00, r_cursor};
+        1'h1: o_vgaslave_dat <= {4'h0, r_cursor_addr[11:0]};
     endcase
 
 always @(posedge i_clk)
@@ -171,10 +165,8 @@ begin
     begin
         if (i_vgaslave_we) begin
             case (i_vgaslave_addr)
-                2'h0: {r_font_base[15:12], r_screen_base [15:12]} <= {i_vgaslave_dat[11:8], i_vgaslave_dat[3:0]};
-                2'h1: r_cursor <= i_vgaslave_dat[7:0];
-                2'h2: r_cursor_addr <= i_vgaslave_dat[11:0];
-                2'h3: ;
+                1'h0: r_cursor <= i_vgaslave_dat[7:0];
+                1'h1: r_cursor_addr <= i_vgaslave_dat[11:0];
             endcase
         end
     end
@@ -238,7 +230,7 @@ begin
         r_screen_addr_rel <= r_screen_addr_nextline;
 end
 
-wire [15:0] screen_addr = { r_screen_base[15:12], r_screen_addr_rel[11:0] };
+wire [12:0] screen_addr = { 1'b1, r_screen_addr_rel[11:0] };
 
 reg [23:0] blink;
 always @(posedge i_clk)
@@ -251,14 +243,16 @@ wire on_cursor_position = (r_screen_addr_rel == r_cursor_addr) && blink[23];
 
 // font memory address generation
 wire [11:0] font_addr_rel;
-wire [15:0] font_addr = { r_font_base[15:12], font_addr_rel[11:0] };
+wire [11:0] font_addr = font_addr_rel[11:0];
 
 reg [15:0] characters;
 always @(posedge i_clk)
-    characters <= i_vgamaster_dat;
+    if (fetch_char_from_screen)
+        characters <= i_vgamaster_dat;
+    else if (x[3:0] == 13)
+        characters <= { characters[7:0], 8'h0 };
 
-wire [7:0] char = on_cursor_position ? r_cursor :
-                    (x[3:0] == 4'h6) ? characters[15:8] : characters[7:0];
+wire [7:0] char = on_cursor_position ? r_cursor : characters[15:8];
 
 assign font_addr_rel = {  char, y[3:0] };
 
@@ -270,7 +264,7 @@ always @(posedge i_clk)
 begin
     if (fetch_fontline)
     begin
-        r_fontline <= x[3] ? i_vgamaster_dat[15:8] : i_vgamaster_dat[7:0];
+        r_fontline <= font_addr[0] ? i_vgamaster_dat[15:8] : i_vgamaster_dat[7:0];
     end
 end
 
@@ -279,12 +273,12 @@ end
 
 assign o_vgamaster_cs   = output_address_fontline || output_addr_char_from_screen;
 
-assign o_vgamaster_addr = output_address_fontline      ? font_addr :
-                          output_addr_char_from_screen ? screen_addr : 16'h00;
+assign o_vgamaster_addr = output_address_fontline      ? { 1'b0,   font_addr[11:1] } :
+                          output_addr_char_from_screen ? { 1'b1, screen_addr[11:1] } : 12'h00;
 
 // o_vgamaster_access informs the multi-bus-master that the vga module wants
 // memory access in the next clock cycle
-assign o_vgamaster_access = start_fetch || fetch_char_from_screen;
+assign o_vgamaster_access = (start_fetch && ~x[3]) || r_phases[1];
 
 // ----------------------------------------------------------------------------
 
